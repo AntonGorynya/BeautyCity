@@ -23,3 +23,9 @@ TG_TOKEN=YOUR_TG_TOKEN
 ```
 - Токен для Телеграм бота вы можете получить https://telegram.me/BotFather Чат ID можно узнать в свойствах канала
 - Не забудьте прописать команду `/setinline.`а так же задайте описание бота через `/setdescription`
+
+### Как запустить
+
+```sh
+python manage.py runuserbot
+```
