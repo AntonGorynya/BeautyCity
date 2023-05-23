@@ -17,6 +17,11 @@ pip install -r requirements.txt
 python3 manage.py makemigrations
 python3 manage.py migrate
 ```
+Создайте суперпользователя
+```sh
+python3 manage.py createsuperuser
+```
+
 Перед установкой создайте файл **.env** вида:
 ```properties
 TG_TOKEN=YOUR_TG_TOKEN
