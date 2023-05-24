@@ -67,7 +67,7 @@ class Promocode(models.Model):
             MaxValueValidator(100),
             MinValueValidator(1)
         ],
-        verbose_name='Скидка'
+        verbose_name='Скидка %'
     )
     limit = models.IntegerField(default=1, verbose_name='Количество использовании')
 
