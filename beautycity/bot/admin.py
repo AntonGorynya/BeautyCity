@@ -35,3 +35,8 @@ class ShiftAdmin(admin.ModelAdmin):
 @admin.register(ClientOffer)
 class ClientServiceAdmin(admin.ModelAdmin):
     list_display = ['client', 'master_schedule', 'shift']
+    raw_id_fields = ['client']
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    raw_id_fields = ['client']

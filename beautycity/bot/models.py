@@ -71,11 +71,18 @@ class Promocode(models.Model):
     )
     limit = models.IntegerField(default=1, verbose_name='Количество использовании')
 
+    def __str__(self):
+        return f'{self.code}'
+
 
 class Feedback(models.Model):
     text = models.CharField(max_length=120, verbose_name='Feedback')
     client = models.ManyToManyField(Client, related_name='feedbacks')
     master = models.ManyToManyField(Master, related_name='feedbacks')
+    date = models.DateField(verbose_name='Дата отзыва')
+
+    def __str__(self):
+        return f'{self.client} {self.master} {self.date}'
 
 
 class ClientOffer(models.Model):
