@@ -30,7 +30,12 @@ TG_TOKEN=YOUR_TG_TOKEN
 - Не забудьте прописать команду `/setinline.`а так же задайте описание бота через `/setdescription`
 
 ### Как запустить
-
+Для запуска бота используйте команду
 ```sh
 python manage.py runuserbot
+```
+
+Для запуска админки используйте команду
+```sh
+python manage.py runserver
 ```
