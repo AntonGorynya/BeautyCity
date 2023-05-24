@@ -69,6 +69,7 @@ class Promocode(models.Model):
         ],
         verbose_name='Скидка'
     )
+    limit = models.IntegerField(default=1, verbose_name='Количество использовании')
 
 
 class ClientOffer(models.Model):
@@ -76,7 +77,7 @@ class ClientOffer(models.Model):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='offer')
     master_schedule = models.ForeignKey(MasterSchedule, on_delete=models.CASCADE, related_name='offer')
     shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='offer')
-    promocode = models.ForeignKey(Promocode, on_delete=models.SET_NULL, related_name='offer', null=True, default=None)
+    promocode = models.ManyToManyField(Promocode, related_name='offer')
 
     def __str__(self):
         return f'{self.client} {self.service} {self.master_schedule} {self.shift}'
