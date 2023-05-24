@@ -21,7 +21,7 @@ if __name__ == '__main__':
     )
     Shift.objects.get_or_create(
         star_time=datetime.time(9, 0),
-        end_time=datetime.time(9,30)
+        end_time=datetime.time(9, 30)
     )
     Shift.objects.get_or_create(
         star_time=datetime.time(9, 30),
@@ -31,4 +31,5 @@ if __name__ == '__main__':
         code='Welcome10',
         star_date=datetime.date(2023, 5, 1),
         end_date=datetime.date(2023, 8, 1),
-        discount=10)
+        discount=10
+    )
