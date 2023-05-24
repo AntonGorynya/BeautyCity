@@ -42,7 +42,7 @@ class Service(models.Model):
 
 
 class MasterSchedule(models.Model):
-    date = models.DateTimeField(verbose_name='Date')
+    date = models.DateField(verbose_name='Date')
     master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='schedule')
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='schedule')
 
@@ -60,8 +60,8 @@ class Shift(models.Model):
 
 class Promocode(models.Model):
     code = models.CharField(max_length=10, verbose_name='promocode')
-    star_date = models.DateTimeField(verbose_name='Действует от')
-    end_date = models.DateTimeField(verbose_name='Действует до')
+    star_date = models.DateField(verbose_name='Действует от')
+    end_date = models.DateField(verbose_name='Действует до')
     discount = models.IntegerField(
         validators=[
             MaxValueValidator(100),
