@@ -42,7 +42,7 @@ class Service(models.Model):
 
 
 class MasterSchedule(models.Model):
-    date = models.DateTimeField(verbose_name='Date')
+    date = models.DateField(verbose_name='Date')
     master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='schedule')
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='schedule')
 
@@ -60,15 +60,16 @@ class Shift(models.Model):
 
 class Promocode(models.Model):
     code = models.CharField(max_length=10, verbose_name='promocode')
-    star_date = models.DateTimeField(verbose_name='Действует от')
-    end_date = models.DateTimeField(verbose_name='Действует до')
+    star_date = models.DateField(verbose_name='Действует от')
+    end_date = models.DateField(verbose_name='Действует до')
     discount = models.IntegerField(
         validators=[
             MaxValueValidator(100),
             MinValueValidator(1)
         ],
-        verbose_name='Скидка'
+        verbose_name='Скидка %'
     )
+    limit = models.IntegerField(default=1, verbose_name='Количество использовании')
 
 
 class ClientOffer(models.Model):
@@ -76,7 +77,7 @@ class ClientOffer(models.Model):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='offer')
     master_schedule = models.ForeignKey(MasterSchedule, on_delete=models.CASCADE, related_name='offer')
     shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='offer')
-    promocode = models.ForeignKey(Promocode, on_delete=models.SET_NULL, related_name='offer', null=True, default=None)
+    promocode = models.ManyToManyField(Promocode, related_name='offer')
 
     def __str__(self):
         return f'{self.client} {self.service} {self.master_schedule} {self.shift}'
