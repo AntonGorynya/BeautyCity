@@ -72,6 +72,12 @@ class Promocode(models.Model):
     limit = models.IntegerField(default=1, verbose_name='Количество использовании')
 
 
+class Feedback(models.Model):
+    text = models.CharField(max_length=120, verbose_name='Feedback')
+    client = models.ManyToManyField(Client, related_name='feedbacks')
+    master = models.ManyToManyField(Master, related_name='feedbacks')
+
+
 class ClientOffer(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='offer')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='offer')
