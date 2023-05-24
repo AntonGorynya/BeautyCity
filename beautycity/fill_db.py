@@ -19,14 +19,11 @@ if __name__ == '__main__':
         master=Master.objects.get(pk=2),
         site=Site.objects.get(pk=1)
     )
-    Shift.objects.get_or_create(
-        star_time=datetime.time(9, 0),
-        end_time=datetime.time(9, 30)
-    )
-    Shift.objects.get_or_create(
-        star_time=datetime.time(9, 30),
-        end_time=datetime.time(10, 0)
-    )
+    for shift_num in range(8, 19, 1):
+        Shift.objects.get_or_create(
+            star_time=datetime.time(shift_num, 0),
+            end_time=datetime.time(shift_num, 30)
+        )
     Promocode.objects.get_or_create(
         code='Welcome10',
         star_date=datetime.date(2023, 5, 1),
