@@ -25,9 +25,11 @@ python3 manage.py createsuperuser
 Перед установкой создайте файл **.env** вида:
 ```properties
 TG_TOKEN=YOUR_TG_TOKEN
+PAYMENTS_TOKEN=PAYMENTS_TOKEN
 ```
 - Токен для Телеграм бота вы можете получить https://telegram.me/BotFather Чат ID можно узнать в свойствах канала
 - Не забудьте прописать команду `/setinline.`а так же задайте описание бота через `/setdescription`
+- Подключите оплату в настройках бота через BotFather
 
 ### Как запустить
 Для запуска бота используйте команду
