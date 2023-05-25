@@ -5,6 +5,7 @@ from telegram import (
     InlineKeyboardMarkup,
     ReplyKeyboardRemove,
     ParseMode,
+    LabeledPrice
 )
 from telegram.ext import (
     Updater,
@@ -14,6 +15,26 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+
+
+def send_invoice(update, context):
+    token = settings.payments_token
+    chat_id = update.effective_message.chat_id
+    context.bot.send_invoice(
+        chat_id,
+        'title',
+        'description',
+        payload='payload',
+        provider_token=token,
+        currency='RUB',
+        need_phone_number=False,
+        need_email=False,
+        is_flexible=False,
+        prices=[
+            LabeledPrice(label='Название услуги', amount=int(10000))
+        ],
+        start_parameter='start_parameter',
+    )
 
 
 class Command(BaseCommand):
@@ -227,7 +248,7 @@ class Command(BaseCommand):
 
 
 
-        def show_common_info(update, _):
+        def show_common_info(update, context):
             query = update.callback_query
             keyboard = [
                 [
