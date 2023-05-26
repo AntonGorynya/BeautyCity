@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from beautycity import settings
+from ...models import Master, Service
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -15,7 +16,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
-
+from phonenumbers import is_valid_number, parse
 
 def send_invoice(update, context):
     token = settings.payments_token
@@ -41,8 +42,8 @@ class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        # tg_token = settings.TOKEN
-        tg_token = settings.tg_token
+        tg_token = settings.TOKEN
+        # tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -125,48 +126,63 @@ class Command(BaseCommand):
             )
             return 'CALL_SALON'
 
-        def show_masters(update, _):
+        def show_masters_time(update, _):
             query = update.callback_query
-            keyboard = [
-                [
-                    InlineKeyboardButton("Ольга", callback_data="master_olga"),
-                    InlineKeyboardButton("Татьяна", callback_data="master_tatiana"),
-                ],
-                [
-                    InlineKeyboardButton("На главную", callback_data="to_start"),
-                ],
-            ]
+            masters = Master.objects.all()
+            keyboard = []
+            for master in masters:
+                keyboard.append([
+                    InlineKeyboardButton(master.name, callback_data=f"master_{master.pk}")
+                ])
+            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             query.edit_message_text(
                 text="Выберите Мастера", reply_markup=reply_markup
             )
-            return 'SHOW_MASTERS'
+            return 'SHOW_MASTERS_TIME'
 
-        def show_service(update, _):
+        def show_masters_producer(update, _):
             query = update.callback_query
-            keyboard = [
-
-                [
-                    InlineKeyboardButton("Покраска волос", callback_data="to_hair_dyeing"),
-                ],
-                [
-                    InlineKeyboardButton("Мейкап", callback_data="to_do_make-up"),
-                    InlineKeyboardButton("Маникюр", callback_data="to_do_manicure")
-                ],
-                [
-                    InlineKeyboardButton("Цены на услуги", callback_data="service_prices"),
-                ],
-                [
-                    InlineKeyboardButton("На главную", callback_data="to_start")
-                ],
-            ]
+            masters = Master.objects.all()
+            keyboard = []
+            for master in masters:
+                keyboard.append([
+                    InlineKeyboardButton(master.name, callback_data=f"master_{master.pk}")
+                ])
+            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             query.edit_message_text(
-                text="Выберите услугу", reply_markup=reply_markup
+                text="Выберите Мастера", reply_markup=reply_markup
             )
-            return 'SHOW_SERVICE'
+            return 'SHOW_MASTERS_PROCEDURE'
+
+        def show_service_time(update, _):
+            query = update.callback_query
+            services = Service.objects.all()
+            keyboard = []
+            for service in services:
+                keyboard.append([InlineKeyboardButton(service.name, callback_data=f"service_{service.pk}")])
+            keyboard.append([InlineKeyboardButton("Цены на услуги", callback_data="service_prices")])
+            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            query.edit_message_text(text="Выберите услугу", reply_markup=reply_markup)
+            return 'SHOW_SERVICE_TIME'
+
+        def show_service_procedure(update, _):
+            query = update.callback_query
+            services = Service.objects.all()
+            keyboard = []
+            for service in services:
+                keyboard.append([InlineKeyboardButton(service.name, callback_data=f"service_{service.pk}")])
+            keyboard.append([InlineKeyboardButton("Цены на услуги", callback_data="service_prices")])
+            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            query.edit_message_text(text="Выберите услугу", reply_markup=reply_markup)
+            return 'SHOW_SERVICE_PROCEDURE'
 
         def show_prices(update, _):
             query = update.callback_query
@@ -189,16 +205,12 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("10:00", callback_data="time_10"),
-
                 ],
                 [
                     InlineKeyboardButton("13:00", callback_data="time_13"),
-
                 ],
                 [
                     InlineKeyboardButton("Выбор Услуг", callback_data="back_to_service"),
-                    InlineKeyboardButton("Выбор Мастера", callback_data="to_choose_master"),
-
                 ],
                 [
                     InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')
@@ -210,43 +222,84 @@ class Command(BaseCommand):
                 text="Выберите время", reply_markup=reply_markup
             )
             return 'SELECT_TIME'
+        def select_time_procedure(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("10:00", callback_data="time_10"),
+                ],
+                [
+                    InlineKeyboardButton("13:00", callback_data="time_13"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_back"),
+                ],
+                [
+                    InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            query.edit_message_text(
+                text="Выберите время", reply_markup=reply_markup
+            )
+            return 'SELECT_TIME_PROCEDURE'
 
         def make_record(update, _):
             query = update.callback_query
             query.answer()
-            query.edit_message_text(
-                "Введите ваше имя и номер телефона в формате:\n\n <ваше имя>:<ваш номер телефона>")
-            return 'GET_CONTACT'
+            query.edit_message_text("Введите ваше имя:")
+            return 'GET_NAME'
 
-        def get_contact(update, _):
-            contact_info = update.message.text
-            name = None
-            phone = None
-            if contact_info:
-                contact_info = contact_info.strip().split(':')
-                if len(contact_info) == 2:
-                    name = contact_info[0].strip()
-                    phone = contact_info[1].strip()
-
-            if name and phone:
-
-                update.message.reply_text("Спасибо за запись! До встречи ДД.ММ ЧЧ:ММ по адресу: ул. улица д. дом")
-
-                keyboard = [
-                    [InlineKeyboardButton("Оплатить сразу", callback_data="to_pay_now")],
-                    [InlineKeyboardButton("На главную", callback_data="to_start")],
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                update.message.reply_text("Желаете записаться снова?", reply_markup=reply_markup)
-
-                return 'WAITING_FOR_CONFIRMATION'
+        def get_name(update, _):
+            name = update.message.text.strip()
+            if name:
+                update.message.reply_text("Введите ваш номер телефона:")
+                return 'GET_PHONE'
             else:
-                update.message.reply_text(
-                    "Пожалуйста, введите имя и номер телефона в указанном формате: <имя>:<номер>.")
-                return 'GET_CONTACT'
+                update.message.reply_text("Пожалуйста, введите ваше имя.")
+                return 'GET_NAME'
 
+        def get_phone(update, _):
+            phone_number = update.message.text.strip()
+            try:
+                parsed_number = parse(phone_number, 'RU')
+                if is_valid_number(parsed_number):
+                    update.message.reply_text("Спасибо за запись! До встречи ДД.ММ ЧЧ:ММ по адресу: ул. улица д. дом")
 
+                    keyboard = [
+                        [InlineKeyboardButton("Оплатить услугу сразу", callback_data="to_pay_now")],
+                        [InlineKeyboardButton("На главную", callback_data="to_start")],
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    update.message.reply_text("Желаете записаться снова?", reply_markup=reply_markup)
 
+                    return 'WAITING_FOR_CONFIRMATION'
+                else:
+                    update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
+                    return 'GET_PHONE'
+            except:
+                update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
+                return 'GET_PHONE'
+
+        def send_invoice(update, context):
+            token = settings.payments_token
+            chat_id = update.effective_message.chat_id
+            context.bot.send_invoice(
+                chat_id,
+                'title',
+                'description',
+                payload='payload',
+                provider_token=token,
+                currency='RUB',
+                need_phone_number=False,
+                need_email=False,
+                is_flexible=False,
+                prices=[
+                    LabeledPrice(label='Название услуги', amount=int(10000))
+                ],
+                start_parameter='start_parameter',
+            )
 
         def show_common_info(update, context):
             query = update.callback_query
@@ -300,41 +353,50 @@ class Command(BaseCommand):
                     MessageHandler(Filters.text, get_feedback),
                 ],
                 'MAKE_RESERVATION': [
-                    CallbackQueryHandler(show_service, pattern='to_choose_service'),
-                    CallbackQueryHandler(show_masters, pattern='to_choose_master'),
+                    CallbackQueryHandler(show_service_time, pattern='to_choose_service'),
+                    CallbackQueryHandler(show_masters_producer, pattern='to_choose_master'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
                 ],
                 'CALL_SALON': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'SHOW_SERVICE': [
+                'SHOW_SERVICE_TIME': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-                    CallbackQueryHandler(select_time, pattern='to_hair_dyeing'),
-                    CallbackQueryHandler(select_time, pattern='to_do_make-up'),
-                    CallbackQueryHandler(select_time, pattern='to_do_manicure'),
+                    CallbackQueryHandler(select_time, pattern=r'service_\d+$'),
+                    CallbackQueryHandler(show_prices, pattern='service_prices'),
+                ],
+                'SHOW_SERVICE_PROCEDURE': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(select_time_procedure, pattern=r'service_\d+$'),
                     CallbackQueryHandler(show_prices, pattern='service_prices'),
                 ],
                 'SHOW_PRICES': [
-                    CallbackQueryHandler(show_service, pattern='back_to_service')
+                    CallbackQueryHandler(show_service_time, pattern='back_to_service')
                 ],
-
-                'SHOW_MASTERS': [
-                    CallbackQueryHandler(select_time, pattern='master_olga'),
-                    CallbackQueryHandler(select_time, pattern='master_tatiana'),
+                'SHOW_MASTERS_TIME': [
+                    CallbackQueryHandler(make_record, pattern=r'^master_\d+$'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-
+                ],
+                'SHOW_MASTERS_PROCEDURE': [
+                    CallbackQueryHandler(show_service_procedure, pattern=r'master_\d+$'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'SELECT_TIME': [
-                    CallbackQueryHandler(show_masters, pattern='to_choose_master'),
-                    CallbackQueryHandler(show_service, pattern='back_to_service'),
+                    CallbackQueryHandler(show_service_time, pattern='back_to_service'),
+                    CallbackQueryHandler(call_salon, pattern='to_contacts'),
+                    CallbackQueryHandler(show_masters_time, pattern='time_10'),
+                    CallbackQueryHandler(show_masters_time, pattern='time_13'),
+                ],
+                'SELECT_TIME_PROCEDURE': [
+                    CallbackQueryHandler(show_masters_producer, pattern='to_back'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
                     CallbackQueryHandler(make_record, pattern='time_10'),
                     CallbackQueryHandler(make_record, pattern='time_13'),
 
                 ],
-                'GET_CONTACT': [
-                    CallbackQueryHandler(show_masters, pattern='to_pay_now'),
+                'GET_PHONE': [
+                    CallbackQueryHandler(send_invoice, pattern='to_pay_now'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'COMMON_INFO': [
@@ -352,6 +414,8 @@ class Command(BaseCommand):
         dispatcher.add_handler(conv_handler)
         start_handler = CommandHandler('start', start_conversation)
         dispatcher.add_handler(start_handler)
-        dispatcher.add_handler(MessageHandler(Filters.text, get_contact))
+        dispatcher.add_handler(MessageHandler(Filters.text, get_phone))
+        dispatcher.add_handler(CallbackQueryHandler(send_invoice, pattern='to_pay_now'))
+        dispatcher.add_handler(CallbackQueryHandler(start_conversation, pattern='to_start'))
         updater.start_polling()
         updater.idle()
