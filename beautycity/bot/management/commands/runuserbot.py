@@ -182,7 +182,7 @@ class Command(BaseCommand):
         def select_time(update, context):
             query = update.callback_query
             service_id = query.data.split('_')[1]
-            context.user_data['service_id'] = service_id
+            context.user_data['service'] = Service.objects.get(pk=service_id)
 
             master_scdeule_id = 1
             # Выбор id из контекста и 2 return должно быть в зависимости от context, фильтр должен быть по дате, выбор даты должен быть на предыдущем шаге.
@@ -193,7 +193,7 @@ class Command(BaseCommand):
             for shift in shifts:
                 keyboard.append(
                     [
-                        InlineKeyboardButton(f'{shift.star_time} -- {shift.end_time}', callback_data=f"shift_{shift.pk}"),
+                        InlineKeyboardButton(f'{shift.start_time} -- {shift.end_time}', callback_data=f"shift_{shift.pk}"),
                     ]
                 )
             keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
@@ -229,7 +229,7 @@ class Command(BaseCommand):
             parsed_number = parse(phone_number, 'RU')
 
             if is_valid_number(parsed_number):
-                #start_time = Shift.objects.get(pk=context.user_data['shift_id']).star_time
+                #start_time = Shift.objects.get(pk=context.user_data['shift_id']).start_time
                 start_time = context.user_data['shift'].start_time
                 context.user_data['phone_number'] = phone_number
                 keyboard = [
@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 print('\n Client: \n',client, f'\n{created }')
                 client_offer = ClientOffer.objects.create(
                     client=client,
-                    service = context.user_data['service_id'],
+                    service = context.user_data['service'],
                     master_schedule=MasterSchedule.objects.get(pk=1),
                     shift = context.user_data['shift']
                 )
@@ -265,7 +265,7 @@ class Command(BaseCommand):
 
         def send_invoice(update, context):
             query = update.callback_query
-            service = Service.objects.get(pk=context.user_data['service_id'])
+            service = context.user_data['service']
             token = settings.payments_token
             chat_id = update.effective_message.chat_id
             context.user_data['invoice_sended'] = True

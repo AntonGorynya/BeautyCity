@@ -51,11 +51,11 @@ class MasterSchedule(models.Model):
 
 
 class Shift(models.Model):
-    start_time = models.TimeField(verbose_name='star_time')
+    start_time = models.TimeField(verbose_name='start_time')
     end_time = models.TimeField(verbose_name='end_time')
 
     def __str__(self):
-        return f'{self.star_time} {self.end_time}'
+        return f'{self.start_time} {self.end_time}'
 
 
 class Promocode(models.Model):
