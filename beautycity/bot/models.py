@@ -51,7 +51,7 @@ class MasterSchedule(models.Model):
 
 
 class Shift(models.Model):
-    star_time = models.TimeField(verbose_name='star_time')
+    start_time = models.TimeField(verbose_name='star_time')
     end_time = models.TimeField(verbose_name='end_time')
 
     def __str__(self):
@@ -90,7 +90,7 @@ class ClientOffer(models.Model):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='offer')
     master_schedule = models.ForeignKey(MasterSchedule, on_delete=models.CASCADE, related_name='offer')
     shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='offer')
-    promocode = models.ManyToManyField(Promocode, related_name='offer')
+    promocode = models.ManyToManyField(Promocode, related_name='offer', blank=True)
 
     def __str__(self):
         return f'{self.client} {self.service} {self.master_schedule} {self.shift}'

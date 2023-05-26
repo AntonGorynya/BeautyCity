@@ -22,7 +22,7 @@ if __name__ == '__main__':
         )
     for shift_num in range(8, 19, 1):
         Shift.objects.get_or_create(
-            star_time=datetime.time(shift_num, 0),
+            start_time=datetime.time(shift_num, 0),
             end_time=datetime.time(shift_num, 30)
         )
     Promocode.objects.get_or_create(
