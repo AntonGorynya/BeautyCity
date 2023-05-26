@@ -177,7 +177,7 @@ class Command(BaseCommand):
             keyboard = []
             for service in services:
                 keyboard.append([InlineKeyboardButton(service.name, callback_data=f"service_{service.pk}")])
-            keyboard.append([InlineKeyboardButton("Цены на услуги", callback_data="service_prices")])
+            keyboard.append([InlineKeyboardButton("!!Цены на услуги", callback_data="service_prices")])
             keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
@@ -187,15 +187,16 @@ class Command(BaseCommand):
         def show_prices(update, _):
             query = update.callback_query
             keyboard = [
-                [InlineKeyboardButton("Назад", callback_data="back_to_service")]
+                [InlineKeyboardButton("Назад", callback_data="back_to_service")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
+            services = Service.objects.all()
+            text = 'Наши услуги \n'
+            for service in services:
+                text +=f'- {str(service)}\n'
             query.edit_message_text(
-                text="Цены на услуги:\n"
-                     "- Покраска волос: $50\n"
-                     "- Маникюр: $30\n"
-                     "- Мейкап: $40",
+                text=text,
                 reply_markup=reply_markup
             )
             return 'SHOW_PRICES'
