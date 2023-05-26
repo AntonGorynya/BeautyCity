@@ -42,8 +42,8 @@ class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        tg_token = settings.TOKEN
-        # tg_token = settings.tg_token
+        # tg_token = settings.TOKEN
+        tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -260,27 +260,25 @@ class Command(BaseCommand):
                 update.message.reply_text("Пожалуйста, введите ваше имя.")
                 return 'GET_NAME'
 
-        def get_phone(update, _):
-            phone_number = update.message.text.strip()
-            try:
-                parsed_number = parse(phone_number, 'RU')
-                if is_valid_number(parsed_number):
-                    update.message.reply_text("Спасибо за запись! До встречи ДД.ММ ЧЧ:ММ по адресу: ул. улица д. дом")
+        def get_phone(update, context):
+            phone_number = update.message.text
+            parsed_number = parse(phone_number, 'RU')
 
-                    keyboard = [
-                        [InlineKeyboardButton("Оплатить услугу сразу", callback_data="to_pay_now")],
-                        [InlineKeyboardButton("На главную", callback_data="to_start")],
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                    update.message.reply_text("Желаете записаться снова?", reply_markup=reply_markup)
+            if is_valid_number(parsed_number):
+                update.message.reply_text("Спасибо за запись! До встречи ДД.ММ ЧЧ:ММ по адресу: ул. улица д. дом")
+                context.user_data['phone_number'] = phone_number
+                keyboard = [
+                    [InlineKeyboardButton("Оплатить услугу сразу", callback_data="to_pay_now")],
+                    [InlineKeyboardButton("На главную", callback_data="to_start")],
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text("Желаете записаться снова?", reply_markup=reply_markup)
 
-                    return 'WAITING_FOR_CONFIRMATION'
-                else:
-                    update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
-                    return 'GET_PHONE'
-            except:
+                return 'WAITING_FOR_CONFIRMATION'
+            else:
                 update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
                 return 'GET_PHONE'
+
 
         def send_invoice(update, context):
             token = settings.payments_token
