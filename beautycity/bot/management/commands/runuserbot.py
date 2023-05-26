@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from beautycity import settings
-from ...models import Master, Service, MasterSchedule, Shift, ClientOffer
+from ...models import Master, Service, MasterSchedule, Shift, ClientOffer, Client
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -119,7 +119,7 @@ class Command(BaseCommand):
         def show_masters(update, context):
             query = update.callback_query
             shift_id = query.data.split('_')[1]
-            context.user_data['shift_id'] = shift_id
+            context.user_data['shift'] = Shift.objects.get(pk=shift_id)
 
             masters = Master.objects.all()
             keyboard = []
@@ -229,7 +229,8 @@ class Command(BaseCommand):
             parsed_number = parse(phone_number, 'RU')
 
             if is_valid_number(parsed_number):
-                start_time = Shift.objects.get(pk=context.user_data['shift_id']).star_time
+                #start_time = Shift.objects.get(pk=context.user_data['shift_id']).star_time
+                start_time = context.user_data['shift'].start_time
                 context.user_data['phone_number'] = phone_number
                 keyboard = [
                     [InlineKeyboardButton("Оплатить услугу сразу", callback_data="to_pay_now")],
@@ -241,6 +242,21 @@ class Command(BaseCommand):
                     reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
                 )
+                print('\ncontext', context.user_data)
+                print(update)
+                client, created = Client.objects.get_or_create(
+                    nickname=update.message.from_user.username,
+                    name=context.user_data['name'],
+                    phone=phone_number
+                )
+                print('\n Client: \n',client, f'\n{created }')
+                client_offer = ClientOffer.objects.create(
+                    client=client,
+                    service = context.user_data['service_id'],
+                    master_schedule=MasterSchedule.objects.get(pk=1),
+                    shift = context.user_data['shift']
+                )
+                print(client_offer)
                 return 'WAITING_FOR_CONFIRMATION'
             else:
                 update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
