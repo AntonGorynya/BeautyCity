@@ -40,7 +40,7 @@ class Command(BaseCommand):
                     InlineKeyboardButton("Позвонить нам", callback_data='to_contacts'),
                 ],
                 [
-                    InlineKeyboardButton("Оставить отзыв о мастере", callback_data='to_leave_feedback'),
+                    InlineKeyboardButton("Оставить отзыв о мастере", callback_data='to_choose_master_for_feedback'),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -69,7 +69,7 @@ class Command(BaseCommand):
         def leave_feedback(update, _):
             query = update.callback_query
             query.answer()
-            query.edit_message_text("Оставьте свой отзыв о мастере: ")
+            query.edit_message_text("Выберете мастера на которого хотите оставить свой отзыв: ")
             return 'GET_FEEDBACK'
 
         def get_feedback(update, _):
@@ -115,6 +115,26 @@ class Command(BaseCommand):
 
         def show_masters(update, context):
             query = update.callback_query
+
+            if 'to_choose_master_for_feedback' == query.data:
+                nickname = query.message.chat['username']
+                client_offers = ClientOffer.objects.filter(client__in=Client.objects.filter(nickname=nickname))
+                keyboard = []
+                for client_offer in client_offers:
+                    keyboard.append([
+                        InlineKeyboardButton(f'Мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n', callback_data=f"master_{client_offer.master_schedule.master.pk}")
+                    ])
+                keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.answer()
+                query.edit_message_text(
+                    text="Выберите Мастера", reply_markup=reply_markup
+                )
+                return 'GET_FEEDBACK'
+
+
+
+
             shift_id = query.data.split('_')[1]
             context.user_data['shift'] = Shift.objects.get(pk=shift_id)
 
@@ -344,6 +364,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(show_common_info, pattern='to_common_info'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
                     CallbackQueryHandler(leave_feedback, pattern='to_leave_feedback'),
+                    CallbackQueryHandler(show_masters, pattern='to_choose_master*'),
                 ],
                 'GET_FEEDBACK': [
                     MessageHandler(Filters.text, get_feedback),
