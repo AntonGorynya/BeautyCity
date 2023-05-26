@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from beautycity import settings
-from ...models import Master, Service
+from ...models import Master, Service, MasterSchedule, Shift, ClientOffer
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -200,50 +200,29 @@ class Command(BaseCommand):
             )
             return 'SHOW_PRICES'
 
-        def select_time(update, _):
+        def select_time(update, context):
+            # Выбор id из контекста и 2 return должно быть в зависимости от context
+            master_scdeule_id = 1
+
             query = update.callback_query
-            keyboard = [
-                [
-                    InlineKeyboardButton("10:00", callback_data="time_10"),
-                ],
-                [
-                    InlineKeyboardButton("13:00", callback_data="time_13"),
-                ],
-                [
-                    InlineKeyboardButton("Выбор Услуг", callback_data="back_to_service"),
-                ],
-                [
-                    InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')
-                ],
-            ]
+            client_offers = ClientOffer.objects.filter(master_schedule__id=master_scdeule_id)
+            shifts = Shift.objects.exclude(pk__in=client_offers.values_list('shift'))
+            keyboard = []
+            for shift in shifts:
+                keyboard.append(
+                    [
+                        InlineKeyboardButton(f'{shift.star_time} -- {shift.end_time}', callback_data=f"time_{shift.pk}"),
+                    ]
+                )
+            keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
+            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             query.edit_message_text(
                 text="Выберите время", reply_markup=reply_markup
             )
             return 'SELECT_TIME'
-        def select_time_procedure(update, _):
-            query = update.callback_query
-            keyboard = [
-                [
-                    InlineKeyboardButton("10:00", callback_data="time_10"),
-                ],
-                [
-                    InlineKeyboardButton("13:00", callback_data="time_13"),
-                ],
-                [
-                    InlineKeyboardButton("Назад", callback_data="to_back"),
-                ],
-                [
-                    InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')
-                ],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.answer()
-            query.edit_message_text(
-                text="Выберите время", reply_markup=reply_markup
-            )
-            return 'SELECT_TIME_PROCEDURE'
 
         def make_record(update, _):
             query = update.callback_query
@@ -366,7 +345,7 @@ class Command(BaseCommand):
                 ],
                 'SHOW_SERVICE_PROCEDURE': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-                    CallbackQueryHandler(select_time_procedure, pattern=r'service_\d+$'),
+                    CallbackQueryHandler(select_time, pattern=r'service_\d+$'),
                     CallbackQueryHandler(show_prices, pattern='service_prices'),
                 ],
                 'SHOW_PRICES': [
@@ -381,17 +360,9 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'SELECT_TIME': [
-                    CallbackQueryHandler(show_service_time, pattern='back_to_service'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
-                    CallbackQueryHandler(show_masters_time, pattern='time_10'),
-                    CallbackQueryHandler(show_masters_time, pattern='time_13'),
-                ],
-                'SELECT_TIME_PROCEDURE': [
-                    CallbackQueryHandler(show_masters_producer, pattern='to_back'),
-                    CallbackQueryHandler(call_salon, pattern='to_contacts'),
-                    CallbackQueryHandler(make_record, pattern='time_10'),
-                    CallbackQueryHandler(make_record, pattern='time_13'),
-
+                    CallbackQueryHandler(show_masters_time, pattern='time_*'),
                 ],
                 'GET_PHONE': [
                     CallbackQueryHandler(send_invoice, pattern='to_pay_now'),
