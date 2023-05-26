@@ -12,6 +12,7 @@ from environs import Env
 env = Env()
 env.read_env()
 tg_token = env('TG_TOKEN')
+payments_token = env('PAYMENTS_TOKEN')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

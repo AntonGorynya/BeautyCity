@@ -18,6 +18,26 @@ from telegram.ext import (
 )
 from phonenumbers import is_valid_number, parse
 
+def send_invoice(update, context):
+    token = settings.payments_token
+    chat_id = update.effective_message.chat_id
+    context.bot.send_invoice(
+        chat_id,
+        'title',
+        'description',
+        payload='payload',
+        provider_token=token,
+        currency='RUB',
+        need_phone_number=False,
+        need_email=False,
+        is_flexible=False,
+        prices=[
+            LabeledPrice(label='Название услуги', amount=int(10000))
+        ],
+        start_parameter='start_parameter',
+    )
+
+
 class Command(BaseCommand):
     help = 'Телеграм-бот'
 
