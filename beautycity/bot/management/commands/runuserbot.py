@@ -404,6 +404,9 @@ class Command(BaseCommand):
                 'SHOW_ANSWER': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
+                'GET_NAME': [
+                    MessageHandler(Filters.text, get_name),
+                ],
 
             },
             fallbacks=[CommandHandler('cancel', cancel)]
