@@ -54,15 +54,12 @@ class Command(BaseCommand):
                 return 'GREETINGS'
 
             if query:
-                print('111')
                 query.answer()
                 query.edit_message_text(
                     text=f"Описание компании", reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
                 )
             else:
-                print('222')
-                print(update)
                 update.message.reply_text(
                     text=f"Описание компании", reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
@@ -310,8 +307,9 @@ class Command(BaseCommand):
             )
             return 'COMMON_INFO'
 
-        def show_orders(update, _):
+        def show_orders(update, context):
             query = update.callback_query
+            nickname = query.message.chat['username']
             keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
@@ -319,8 +317,12 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
+            text = 'Последнине записи: \n'
+            client_offers=ClientOffer.objects.filter(client__in=Client.objects.filter(nickname=nickname))
+            for client_offer in client_offers:
+                text +=f'Ваш мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n'
             query.edit_message_text(
-                text="Вы записаны", reply_markup=reply_markup
+                text=text, reply_markup=reply_markup
             )
             return 'SHOW_ANSWER'
 
