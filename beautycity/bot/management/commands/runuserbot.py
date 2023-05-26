@@ -201,7 +201,7 @@ class Command(BaseCommand):
             return 'SHOW_PRICES'
 
         def select_time(update, context):
-            # Выбор id из контекста и 2 return должно быть в зависимости от context
+            # Выбор id из контекста и 2 return должно быть в зависимости от context, фильтр должен быть по дате, выбор даты должен быть на предыдущем шаге.
             master_scdeule_id = 1
 
             query = update.callback_query
