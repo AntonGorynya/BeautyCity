@@ -44,7 +44,16 @@ class Command(BaseCommand):
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            if query and 'invoice_sended'not in context.user_data:
+            if 'invoice_sended' in context.user_data:
+                chat_id = update.effective_message.chat_id
+                context.bot.send_message(
+                    chat_id,
+                    text=f"Описание компании", reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
+                )
+                return 'GREETINGS'
+
+            if query:
                 print('111')
                 query.answer()
                 query.edit_message_text(
