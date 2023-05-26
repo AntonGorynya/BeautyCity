@@ -29,7 +29,7 @@ class MasterScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(Shift)
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ['star_time', 'end_time']
+    pass
 
 
 @admin.register(ClientOffer)
