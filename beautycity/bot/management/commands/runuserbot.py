@@ -18,25 +18,6 @@ from telegram.ext import (
 )
 from phonenumbers import is_valid_number, parse
 
-def send_invoice(update, context):
-    token = settings.payments_token
-    chat_id = update.effective_message.chat_id
-    context.bot.send_invoice(
-        chat_id,
-        'title',
-        'description',
-        payload='payload',
-        provider_token=token,
-        currency='RUB',
-        need_phone_number=False,
-        need_email=False,
-        is_flexible=False,
-        prices=[
-            LabeledPrice(label='Название услуги', amount=int(10000))
-        ],
-        start_parameter='start_parameter',
-    )
-
 
 class Command(BaseCommand):
     help = 'Телеграм-бот'
@@ -47,13 +28,11 @@ class Command(BaseCommand):
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
-        def start_conversation(update, _):
+        def start_conversation(update, context):
             query = update.callback_query
-            if query:
-                query.answer()
             keyboard = [
                 [
-                    InlineKeyboardButton("Записаться к нам", callback_data='to_make_reservation'),
+                    InlineKeyboardButton("Записаться", callback_data='to_make_reservation'),
                     InlineKeyboardButton("Мои записи", callback_data="to_show_orders"),
                     InlineKeyboardButton("О нас", callback_data="to_common_info"),
                 ],
@@ -65,18 +44,20 @@ class Command(BaseCommand):
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-
-            if query:
+            if query and 'invoice_sended'not in context.user_data:
+                print('111')
+                query.answer()
                 query.edit_message_text(
                     text=f"Описание компании", reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
                 )
             else:
+                print('222')
+                print(update)
                 update.message.reply_text(
                     text=f"Описание компании", reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
                 )
-
             return 'GREETINGS'
 
         def leave_feedback(update, _):
@@ -126,24 +107,11 @@ class Command(BaseCommand):
             )
             return 'CALL_SALON'
 
-        def show_masters_time(update, _):
+        def show_masters(update, context):
             query = update.callback_query
-            masters = Master.objects.all()
-            keyboard = []
-            for master in masters:
-                keyboard.append([
-                    InlineKeyboardButton(master.name, callback_data=f"master_{master.pk}")
-                ])
-            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.answer()
-            query.edit_message_text(
-                text="Выберите Мастера", reply_markup=reply_markup
-            )
-            return 'SHOW_MASTERS_TIME'
+            shift_id = query.data.split('_')[1]
+            context.user_data['shift_id'] = shift_id
 
-        def show_masters_producer(update, _):
-            query = update.callback_query
             masters = Master.objects.all()
             keyboard = []
             for master in masters:
@@ -156,7 +124,8 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text="Выберите Мастера", reply_markup=reply_markup
             )
-            return 'SHOW_MASTERS_PROCEDURE'
+            return 'SHOW_MASTERS'
+
 
         def show_service_time(update, _):
             query = update.callback_query
@@ -202,17 +171,20 @@ class Command(BaseCommand):
             return 'SHOW_PRICES'
 
         def select_time(update, context):
-            # Выбор id из контекста и 2 return должно быть в зависимости от context, фильтр должен быть по дате, выбор даты должен быть на предыдущем шаге.
-            master_scdeule_id = 1
-
             query = update.callback_query
+            service_id = query.data.split('_')[1]
+            context.user_data['service_id'] = service_id
+
+            master_scdeule_id = 1
+            # Выбор id из контекста и 2 return должно быть в зависимости от context, фильтр должен быть по дате, выбор даты должен быть на предыдущем шаге.
+
             client_offers = ClientOffer.objects.filter(master_schedule__id=master_scdeule_id)
             shifts = Shift.objects.exclude(pk__in=client_offers.values_list('shift'))
             keyboard = []
             for shift in shifts:
                 keyboard.append(
                     [
-                        InlineKeyboardButton(f'{shift.star_time} -- {shift.end_time}', callback_data=f"time_{shift.pk}"),
+                        InlineKeyboardButton(f'{shift.star_time} -- {shift.end_time}', callback_data=f"shift_{shift.pk}"),
                     ]
                 )
             keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
@@ -225,14 +197,17 @@ class Command(BaseCommand):
             )
             return 'SELECT_TIME'
 
-        def make_record(update, _):
+        def make_record(update, context):
             query = update.callback_query
+            service_id = query.data.split('_')[1]
+            context.user_data['master_id'] = service_id
             query.answer()
             query.edit_message_text("Введите ваше имя:")
             return 'GET_NAME'
 
-        def get_name(update, _):
+        def get_name(update, context):
             name = update.message.text.strip()
+            context.user_data['name'] = name
             if name:
                 update.message.reply_text("Введите ваш номер телефона:")
                 return 'GET_PHONE'
@@ -245,15 +220,18 @@ class Command(BaseCommand):
             parsed_number = parse(phone_number, 'RU')
 
             if is_valid_number(parsed_number):
-                update.message.reply_text("Спасибо за запись! До встречи ДД.ММ ЧЧ:ММ по адресу: ул. улица д. дом")
+                start_time = Shift.objects.get(pk=context.user_data['shift_id']).star_time
                 context.user_data['phone_number'] = phone_number
                 keyboard = [
                     [InlineKeyboardButton("Оплатить услугу сразу", callback_data="to_pay_now")],
                     [InlineKeyboardButton("На главную", callback_data="to_start")],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                update.message.reply_text("Желаете записаться снова?", reply_markup=reply_markup)
-
+                update.message.reply_text(
+                    text=f"Спасибо за запись! До встречи ДД.ММ {str(start_time)} по адресу: ул. улица д. дом",
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
+                )
                 return 'WAITING_FOR_CONFIRMATION'
             else:
                 update.message.reply_text("Пожалуйста, введите корректный номер телефона.")
@@ -261,12 +239,20 @@ class Command(BaseCommand):
 
 
         def send_invoice(update, context):
+            query = update.callback_query
+            service = Service.objects.get(pk=context.user_data['service_id'])
             token = settings.payments_token
             chat_id = update.effective_message.chat_id
+            context.user_data['invoice_sended'] = True
+            keyboard = [
+                [InlineKeyboardButton('Оплатить', pay=True)],
+                [InlineKeyboardButton('На главную', callback_data='to_start')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             context.bot.send_invoice(
                 chat_id,
-                'title',
-                'description',
+                'Оплата услуг',
+                service.name,
                 payload='payload',
                 provider_token=token,
                 currency='RUB',
@@ -274,10 +260,15 @@ class Command(BaseCommand):
                 need_email=False,
                 is_flexible=False,
                 prices=[
-                    LabeledPrice(label='Название услуги', amount=int(10000))
+                    LabeledPrice(label=service.name, amount=int(f'{service.price}00'))
                 ],
                 start_parameter='start_parameter',
+                reply_markup=reply_markup,
             )
+            query.answer()
+            return 'SHOW_ANSWER'
+
+
 
         def show_common_info(update, context):
             query = update.callback_query
@@ -332,7 +323,7 @@ class Command(BaseCommand):
                 ],
                 'MAKE_RESERVATION': [
                     CallbackQueryHandler(show_service_time, pattern='to_choose_service'),
-                    CallbackQueryHandler(show_masters_producer, pattern='to_choose_master'),
+                    CallbackQueryHandler(show_masters, pattern='to_choose_master'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
                 ],
@@ -352,7 +343,7 @@ class Command(BaseCommand):
                 'SHOW_PRICES': [
                     CallbackQueryHandler(show_service_time, pattern='back_to_service')
                 ],
-                'SHOW_MASTERS_TIME': [
+                'SHOW_MASTERS': [
                     CallbackQueryHandler(make_record, pattern=r'^master_\d+$'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
@@ -363,7 +354,7 @@ class Command(BaseCommand):
                 'SELECT_TIME': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
-                    CallbackQueryHandler(show_masters_time, pattern='time_*'),
+                    CallbackQueryHandler(show_masters, pattern='shift_*'),
                 ],
                 'GET_PHONE': [
                     CallbackQueryHandler(send_invoice, pattern='to_pay_now'),
