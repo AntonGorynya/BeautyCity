@@ -1,6 +1,8 @@
+import datetime
+
 from django.core.management.base import BaseCommand
 from beautycity import settings
-from ...models import Master, Service, MasterSchedule, Shift, ClientOffer, Client
+from ...models import Master, Service, MasterSchedule, Shift, ClientOffer, Client, Feedback
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -66,18 +68,25 @@ class Command(BaseCommand):
                 )
             return 'GREETINGS'
 
-        def leave_feedback(update, _):
+        def leave_feedback(update, context):
             query = update.callback_query
+            masterschedule_id = query.data.split('_')[1]
+            context.user_data['master_schedule'] = MasterSchedule.objects.get(pk=masterschedule_id).master
             query.answer()
-            query.edit_message_text("Выберете мастера на которого хотите оставить свой отзыв: ")
+            query.edit_message_text("Напишите свой отзыв: ")
             return 'GET_FEEDBACK'
 
-        def get_feedback(update, _):
-            feedback_text = update.message.text
-            # feedback = Feedback(name="User", feedback=feedback_text)
-            # feedback.save()
+        def get_feedback(update, context):
+            query = update.callback_query
             update.message.reply_text("Спасибо за ваш отзыв!")
-            start_conversation(update, _)
+            nickname = update.message.from_user.username
+            Feedback.objects.create(
+                text=update.message.text,
+                client=Client.objects.get(nickname=nickname),
+                master=context.user_data['master_schedule'],
+                date=datetime.date.today(),
+            )
+            start_conversation(update, context)
             return 'GREETINGS'
 
         def make_reservation(update, _):
@@ -122,7 +131,7 @@ class Command(BaseCommand):
                 keyboard = []
                 for client_offer in client_offers:
                     keyboard.append([
-                        InlineKeyboardButton(f'Мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n', callback_data=f"master_{client_offer.master_schedule.master.pk}")
+                        InlineKeyboardButton(f'Мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n', callback_data=f"masterschedule_{client_offer.master_schedule.pk}")
                     ])
                 keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -269,7 +278,7 @@ class Command(BaseCommand):
                 print('\n Client: \n',client, f'\n{created }')
                 client_offer = ClientOffer.objects.create(
                     client=client,
-                    service = context.user_data['service'],
+                    service=context.user_data['service'],
                     master_schedule=MasterSchedule.objects.get(pk=1),
                     shift = context.user_data['shift']
                 )
@@ -363,10 +372,10 @@ class Command(BaseCommand):
                     CallbackQueryHandler(show_orders, pattern='to_show_orders'),
                     CallbackQueryHandler(show_common_info, pattern='to_common_info'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
-                    CallbackQueryHandler(leave_feedback, pattern='to_leave_feedback'),
                     CallbackQueryHandler(show_masters, pattern='to_choose_master*'),
                 ],
                 'GET_FEEDBACK': [
+                    CallbackQueryHandler(leave_feedback, pattern='masterschedule_*'),
                     MessageHandler(Filters.text, get_feedback),
                 ],
                 'MAKE_RESERVATION': [
