@@ -77,8 +77,8 @@ class Promocode(models.Model):
 
 class Feedback(models.Model):
     text = models.CharField(max_length=120, verbose_name='Feedback')
-    client = models.ManyToManyField(Client, related_name='feedbacks')
-    master = models.ManyToManyField(Master, related_name='feedbacks')
+    client = models.ForeignKey(Client, related_name='feedbacks', on_delete=models.CASCADE)
+    master = models.ForeignKey(Master, related_name='feedbacks', on_delete=models.CASCADE)
     date = models.DateField(verbose_name='Дата отзыва')
 
     def __str__(self):

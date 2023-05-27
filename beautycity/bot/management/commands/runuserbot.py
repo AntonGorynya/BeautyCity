@@ -80,12 +80,14 @@ class Command(BaseCommand):
             query = update.callback_query
             update.message.reply_text("Спасибо за ваш отзыв!")
             nickname = update.message.from_user.username
+
             Feedback.objects.create(
                 text=update.message.text,
-                client=Client.objects.get(nickname=nickname),
-                master=context.user_data['master_schedule'],
                 date=datetime.date.today(),
+                client=Client.objects.get(nickname=nickname),
+                master=context.user_data['master_schedule']
             )
+
             start_conversation(update, context)
             return 'GREETINGS'
 
