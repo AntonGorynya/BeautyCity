@@ -70,8 +70,8 @@ class Command(BaseCommand):
 
         def leave_feedback(update, context):
             query = update.callback_query
-            masterschedule_id = query.data.split('_')[1]
-            context.user_data['master_schedule'] = MasterSchedule.objects.get(pk=masterschedule_id).master
+            clientoffer_id = query.data.split('_')[1]
+            context.user_data['client_offer'] = ClientOffer.objects.get(pk=clientoffer_id)
             query.answer()
             query.edit_message_text("Напишите свой отзыв: ")
             return 'GET_FEEDBACK'
@@ -80,12 +80,13 @@ class Command(BaseCommand):
             query = update.callback_query
             update.message.reply_text("Спасибо за ваш отзыв!")
             nickname = update.message.from_user.username
+            client_offer = context.user_data['client_offer']
 
             Feedback.objects.create(
                 text=update.message.text,
                 date=datetime.date.today(),
                 client=Client.objects.get(nickname=nickname),
-                master=context.user_data['master_schedule']
+                master=client_offer.master_schedule.master
             )
 
             start_conversation(update, context)
