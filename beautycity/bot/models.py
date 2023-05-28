@@ -3,7 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class Client(models.Model):
-    nickname = models.CharField(max_length=500, verbose_name='Никнейм клиента')
+    nickname = models.CharField(max_length=500, verbose_name='Никнейм клиента', unique=True )
     name = models.CharField(max_length=40, verbose_name='Имя клиента', null=True)
     phone = models.CharField(max_length=12, verbose_name='Номер телефона', null=True)
     personal_data_consent = models.BooleanField(verbose_name='Согласие на ОПД', default=False)
