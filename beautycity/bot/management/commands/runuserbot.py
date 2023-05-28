@@ -33,6 +33,12 @@ class Command(BaseCommand):
 
         def start_conversation(update, context):
             query = update.callback_query
+            context.user_data['service'] = None
+            context.user_data['master'] = None
+            context.user_data['master_schedules'] = None
+            context.user_data['masterschedule'] = None
+            context.user_data['shift'] = None
+            print(context.user_data)
             keyboard = [
                 [
                     InlineKeyboardButton("Записаться", callback_data='to_make_reservation'),
@@ -129,6 +135,22 @@ class Command(BaseCommand):
         def show_masters(update, context):
             query = update.callback_query
 
+            if 'to_choose_master' == query.data:
+                masters = Master.objects.all()
+                keyboard = []
+                for master in masters:
+                    keyboard.append([
+                        InlineKeyboardButton(master.name, callback_data=f"master_{master.pk}")
+                    ])
+                keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.answer()
+                query.edit_message_text(
+                    text="Выберите Мастера", reply_markup=reply_markup
+                )
+                return 'MASTER_TO_DATE'
+
+
             if 'to_choose_master_for_feedback' == query.data:
                 nickname = query.message.chat['username']
                 client_offers = ClientOffer.objects.filter(client__in=Client.objects.filter(nickname=nickname))
@@ -166,14 +188,12 @@ class Command(BaseCommand):
 
 
         def show_service(update, _):
-            print('111')
             query = update.callback_query
             services = Service.objects.all()
             keyboard = []
             for service in services:
                 keyboard.append([InlineKeyboardButton(service.name, callback_data=f"service_{service.pk}")])
                 #keyboard.append([InlineKeyboardButton(service.name, callback_data=service)])
-                print(type(service))
             keyboard.append([InlineKeyboardButton("Цены на услуги", callback_data="service_prices")])
             keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -214,48 +234,63 @@ class Command(BaseCommand):
 
         def select_date(update, context):
             query = update.callback_query
-            service_id = query.data.split('_')[1]
-            context.user_data['service'] = Service.objects.get(pk=service_id)
+            print(query.data)
 
-            schedules = MasterSchedule.objects.values('date').distinct()
-            keyboard = []
-            for schedule in schedules:
-                date = schedule['date']
-                keyboard.append(
-                    [
-                        InlineKeyboardButton(f'{date}',  callback_data=f"date_{date}"),
-                    ]
+            def generate_keys():
+                schedules = MasterSchedule.objects.values('date').distinct()
+                keyboard = []
+                for schedule in schedules:
+                    date = schedule['date']
+                    keyboard.append(
+                        [
+                            InlineKeyboardButton(f'{date}', callback_data=f"date_{date}"),
+                        ]
+                    )
+                keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
+                keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.answer()
+                query.edit_message_text(
+                    text="Выберите дату", reply_markup=reply_markup
                 )
-            keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
-            keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
 
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.answer()
-            query.edit_message_text(
-                text="Выберите дату", reply_markup=reply_markup
-            )
+            if 'service_' in query.data:
+                service_id = query.data.split('_')[1]
+                context.user_data['service'] = Service.objects.get(pk=service_id)
+                generate_keys()
+
+            if 'master_' in query.data:
+                master_id = query.data.split('_')[1]
+                context.user_data['master'] = Master.objects.get(pk=master_id)
+                generate_keys()
             return 'SELECT_DATE'
 
 
-
-
-
         def select_time(update, context):
+            print(context.user_data)
             query = update.callback_query
             date = query.data.split('_')[1]
-            context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date)
+
+            if context.user_data['service']:
+                context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date)
+
+            else:
+                master = context.user_data['master']
+                context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date, master=master)
 
             ids = []
-            for schedule in  context.user_data['master_schedules']:
+            for schedule in context.user_data['master_schedules']:
                 ids.append(schedule.pk)
             client_offers = ClientOffer.objects.filter(master_schedule__id__in=ids).annotate(
-                offer_count=Count('shift')).filter(offer_count__lt = len(ids))
+                offer_count=Count('shift')).filter(offer_count__lt=len(ids))
             shifts = Shift.objects.exclude(pk__in=client_offers.values_list('shift'))
             keyboard = []
             for shift in shifts:
                 keyboard.append(
                     [
-                        InlineKeyboardButton(f'{shift.start_time} -- {shift.end_time}', callback_data=f"shift_{shift.pk}"),
+                        InlineKeyboardButton(f'{shift.start_time} -- {shift.end_time}',
+                                             callback_data=f"shift_{shift.pk}"),
                     ]
                 )
             keyboard.append([InlineKeyboardButton("Позвонить нам", callback_data='to_contacts')])
@@ -266,12 +301,24 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text="Выберите время", reply_markup=reply_markup
             )
-            return 'SELECT_TIME'
+            if context.user_data['service']:
+                return 'SELECT_TIME'
+            else:
+                return 'SHOW_MASTERS'
+
 
         def make_record(update, context):
             query = update.callback_query
-            master_id = query.data.split('_')[1]
-            context.user_data['masterschedule'] = context.user_data['master_schedules'].filter(master__id=master_id).first()
+            print('make_record')
+            print(query.data)
+            print(context.user_data)
+            if 'master' in query.data:
+                master_id = query.data.split('_')[1]
+                context.user_data['masterschedule'] = context.user_data['master_schedules'].filter(master__id=master_id).first()
+            if 'shift' in query.data:
+                shift_id = query.data.split('_')[1]
+                context.user_data['shift'] =Shift.objects.get(pk=shift_id)
+
             query.answer()
             query.edit_message_text("Введите ваше имя:")
             return 'GET_NAME'
@@ -355,7 +402,6 @@ class Command(BaseCommand):
             return 'SHOW_ANSWER'
 
 
-
         def show_common_info(update, context):
             query = update.callback_query
             keyboard = [
@@ -413,6 +459,7 @@ class Command(BaseCommand):
                 ],
                 'GET_FEEDBACK': [
                     CallbackQueryHandler(leave_feedback, pattern='masterschedule_*'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_feedback),
                 ],
                 'MAKE_RESERVATION': [
@@ -445,6 +492,11 @@ class Command(BaseCommand):
                 ],
                 'SHOW_MASTERS': [
                     CallbackQueryHandler(make_record, pattern=r'^master_\d+$'),
+                    CallbackQueryHandler(make_record, pattern='shift_*'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'MASTER_TO_DATE': [
+                    CallbackQueryHandler(select_date, pattern=r'^master_\d+$'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'SHOW_MASTERS_PROCEDURE': [
