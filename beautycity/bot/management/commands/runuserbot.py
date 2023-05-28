@@ -352,7 +352,9 @@ class Command(BaseCommand):
             text = 'Последнине записи: \n'
             client_offers=ClientOffer.objects.filter(client__in=Client.objects.filter(nickname=nickname))
             for client_offer in client_offers:
-                text +=f'Ваш мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n'
+                text += f'Вы записаны на {client_offer.master_schedule.date}' \
+                        f' Ваш мастер {client_offer.master_schedule.master}.' \
+                        f' Запись на {client_offer.shift.start_time} \n'
             query.edit_message_text(
                 text=text, reply_markup=reply_markup
             )
