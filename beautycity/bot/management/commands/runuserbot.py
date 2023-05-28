@@ -148,16 +148,17 @@ class Command(BaseCommand):
                 query.edit_message_text(
                     text="Выберите Мастера", reply_markup=reply_markup
                 )
-                return 'MASTER_TO_DATE'
+                return 'MASTER_TO_SERVICE'
 
 
             if 'to_choose_master_for_feedback' == query.data:
                 nickname = query.message.chat['username']
+                print(nickname)
                 client_offers = ClientOffer.objects.filter(client__in=Client.objects.filter(nickname=nickname))
                 keyboard = []
                 for client_offer in client_offers:
                     keyboard.append([
-                        InlineKeyboardButton(f'Мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n', callback_data=f"masterschedule_{client_offer.master_schedule.pk}")
+                        InlineKeyboardButton(f'Мастер {client_offer.master_schedule.master}.Запись на {client_offer.shift.start_time} \n', callback_data=f"masterschedule_{client_offer.pk}")
                     ])
                 keyboard.append([InlineKeyboardButton("На главную", callback_data="to_start")])
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -187,8 +188,12 @@ class Command(BaseCommand):
                 return 'SHOW_MASTERS'
 
 
-        def show_service(update, _):
+        def select_service(update, context):
             query = update.callback_query
+            if 'master' in query.data:
+                master_id = query.data.split('_')[1]
+                context.user_data['master'] = Master.objects.get(pk=master_id)
+
             services = Service.objects.all()
             keyboard = []
             for service in services:
@@ -268,16 +273,20 @@ class Command(BaseCommand):
 
 
         def select_time(update, context):
-            print(context.user_data)
+            print('Выбор времени')
             query = update.callback_query
             date = query.data.split('_')[1]
 
-            if context.user_data['service']:
-                context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date)
+            print(context.user_data)
+            print(query.data)
 
-            else:
+            if context.user_data['master']:
                 master = context.user_data['master']
                 context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date, master=master)
+                context.user_data['masterschedule'] = MasterSchedule.objects.filter(date=date, master=master).first()
+            else:
+                context.user_data['master_schedules'] = MasterSchedule.objects.filter(date=date)
+
 
             ids = []
             for schedule in context.user_data['master_schedules']:
@@ -301,10 +310,10 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text="Выберите время", reply_markup=reply_markup
             )
-            if context.user_data['service']:
-                return 'SELECT_TIME'
-            else:
+            if context.user_data['master']:
                 return 'SHOW_MASTERS'
+            return 'SELECT_TIME'
+
 
 
         def make_record(update, context):
@@ -358,6 +367,7 @@ class Command(BaseCommand):
                 client.phone = phone_number
                 client.save()
                 print('\n Client: \n',client, f'\n{created }')
+                print(context.user_data)
                 client_offer = ClientOffer.objects.create(
                     client=client,
                     service=context.user_data['service'],
@@ -463,7 +473,7 @@ class Command(BaseCommand):
                     MessageHandler(Filters.text, get_feedback),
                 ],
                 'MAKE_RESERVATION': [
-                    CallbackQueryHandler(show_service, pattern='to_choose_service'),
+                    CallbackQueryHandler(select_service, pattern='to_choose_service'),
                     CallbackQueryHandler(show_masters, pattern='to_choose_master'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(call_salon, pattern='to_contacts'),
@@ -488,15 +498,15 @@ class Command(BaseCommand):
                     CallbackQueryHandler(show_prices, pattern='service_prices'),
                 ],
                 'SHOW_PRICES': [
-                    CallbackQueryHandler(show_service, pattern='back_to_service')
+                    CallbackQueryHandler(select_service, pattern='back_to_service')
                 ],
                 'SHOW_MASTERS': [
                     CallbackQueryHandler(make_record, pattern=r'^master_\d+$'),
                     CallbackQueryHandler(make_record, pattern='shift_*'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'MASTER_TO_DATE': [
-                    CallbackQueryHandler(select_date, pattern=r'^master_\d+$'),
+                'MASTER_TO_SERVICE': [
+                    CallbackQueryHandler(select_service, pattern=r'^master_\d+$'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'SHOW_MASTERS_PROCEDURE': [
